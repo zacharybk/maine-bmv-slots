@@ -1,0 +1,38 @@
+# Environment variables — NEVER commit these
+.env
+.env.local
+.env.production
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+debug_*.png
+debug_screenshots/
+
+# Node / Next.js
+node_modules/
+.next/
+.next
+out/
+dist/
+*.tsbuildinfo
+
+# Misc
+.DS_Store
+next-env.d.ts
+
+# Vercel
+.vercel
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Playwright
+test-results/
+playwright-report/
+*.png
