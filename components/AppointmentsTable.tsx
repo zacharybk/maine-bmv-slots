@@ -42,7 +42,8 @@ export default function AppointmentsTable() {
       .order("appointment_date", { ascending: true })
       .order("appointment_time", { ascending: true, nullsFirst: true });
 
-    if (filters.available === "Y") query = query.eq("available", true);
+    const todayStr = new Date().toISOString().split("T")[0];
+    if (filters.available === "Y") query = query.eq("available", true).gte("appointment_date", todayStr);
     if (filters.available === "N") query = query.eq("available", false);
     if (filters.offices.length > 0) query = query.in("office", filters.offices);
 

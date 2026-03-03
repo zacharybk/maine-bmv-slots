@@ -32,6 +32,10 @@ next-env.d.ts
 .DS_Store
 Thumbs.db
 
+# SSH keys — never commit these
+*.key
+*.pem
+
 # Playwright
 test-results/
 playwright-report/

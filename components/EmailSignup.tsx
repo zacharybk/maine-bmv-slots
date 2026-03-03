@@ -16,11 +16,17 @@ export default function EmailSignup() {
 
     const { error } = await supabase
       .from("email_subscribers")
-      .upsert({ email: email.trim().toLowerCase(), active: true }, { onConflict: "email" });
+      .insert({ email: email.trim().toLowerCase(), active: true });
 
     if (error) {
-      setStatus("error");
-      setErrorMsg("Something went wrong. Try again.");
+      if (error.code === "23505") {
+        // Already subscribed — treat as success
+        setStatus("success");
+        setEmail("");
+      } else {
+        setStatus("error");
+        setErrorMsg("Something went wrong. Try again.");
+      }
     } else {
       setStatus("success");
       setEmail("");

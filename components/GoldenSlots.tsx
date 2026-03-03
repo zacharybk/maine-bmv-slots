@@ -25,14 +25,28 @@ export default function GoldenSlots() {
   const [slots, setSlots] = useState<Appointment[]>([]);
 
   const fetchSlots = async () => {
+    const today = new Date();
+    const todayStr = today.toISOString().split("T")[0];
+
     const { data } = await supabase
       .from("appointments")
       .select("*")
       .eq("slot_type", "golden")
       .eq("available", true)
+      .gte("appointment_date", todayStr)
       .order("appointment_date", { ascending: true })
       .order("appointment_time", { ascending: true });
-    if (data) setSlots(data);
+
+    if (data) {
+      // Also filter out same-day slots whose time has already passed
+      const now = new Date();
+      const filtered = data.filter((slot) => {
+        if (slot.appointment_date !== todayStr || !slot.appointment_time) return true;
+        const [h, m] = slot.appointment_time.split(":").map(Number);
+        return h > now.getHours() || (h === now.getHours() && m > now.getMinutes());
+      });
+      setSlots(filtered);
+    }
   };
 
   useEffect(() => {

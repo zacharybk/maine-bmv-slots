@@ -1,7 +1,9 @@
 name: Scrape Maine BMV Appointments
 
 on:
-  workflow_dispatch:  # manual trigger only — scraper runs on Render (more reliable)
+  schedule:
+    - cron: "*/15 * * * *"   # every 15 min — reliable on public repos
+  workflow_dispatch:           # keep manual trigger for testing
 
 jobs:
   scrape:
