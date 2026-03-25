@@ -45,6 +45,8 @@ export default function AppointmentsTable() {
     const todayStr = new Date().toISOString().split("T")[0];
     if (filters.available === "Y") query = query.eq("available", true).gte("appointment_date", todayStr);
     if (filters.available === "N") query = query.eq("available", false);
+    // In "all" mode, never show past dates with available=true (stale records)
+    if (filters.available === "all") query = query.or(`available.eq.false,appointment_date.gte.${todayStr}`);
     if (filters.offices.length > 0) query = query.in("office", filters.offices);
 
     const { data } = await query;

@@ -89,6 +89,8 @@ def upsert_future_slot(db: Client, office: str, closest_date: date) -> bool:
     if existing.data:
         row = existing.data[0]
         existing_date = row["appointment_date"]
+        existing_date_obj = date.fromisoformat(existing_date)
+        today_date = datetime.now(timezone.utc).date()
 
         if existing_date == date_str:
             # Same date — just refresh last_seen, ensure available
@@ -97,8 +99,8 @@ def upsert_future_slot(db: Client, office: str, closest_date: date) -> bool:
                 "available": True,
             }).eq("id", row["id"]).execute()
             return False
-        elif closest_date < date.fromisoformat(existing_date):
-            # Closer date found — retire old record, create new one
+        elif closest_date < existing_date_obj or existing_date_obj < today_date:
+            # Closer date found, OR existing record's date is now in the past (stale) — retire it
             db.table("appointments").update({
                 "is_current_closest": False,
                 "replaced_at": now,
@@ -107,7 +109,7 @@ def upsert_future_slot(db: Client, office: str, closest_date: date) -> bool:
             }).eq("id", row["id"]).execute()
             # Fall through to insert new
         else:
-            # Existing record has a closer or equal date, nothing to do
+            # Existing record has a closer date and is not stale, nothing to do
             db.table("appointments").update({
                 "last_seen_at": now,
                 "available": True,
