@@ -30,7 +30,7 @@ export default function LastChecked() {
   }, []);
 
   if (!lastRun?.completed_at) {
-    return <span className="text-sm text-gray-400">Checking now...</span>;
+    return null;
   }
 
   const ts = new Date(lastRun.completed_at);

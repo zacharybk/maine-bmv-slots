@@ -1,7 +1,6 @@
 import GoldenSlots from "@/components/GoldenSlots";
 import AppointmentsTable from "@/components/AppointmentsTable";
 import LastChecked from "@/components/LastChecked";
-import EmailSignup from "@/components/EmailSignup";
 
 export default function Home() {
   return (
@@ -15,7 +14,7 @@ export default function Home() {
             </h1>
             <p className="text-gray-500 text-sm mt-1 max-w-lg">
               Live tracker for Driver's License &amp; Real ID appointments at all 13 Maine BMV offices.
-              Short-notice slots highlighted. Checks every 5 minutes.
+              Short-notice slots highlighted. Checks every 10 minutes or so.
             </p>
           </div>
           <LastChecked />
@@ -36,11 +35,6 @@ export default function Home() {
         <AppointmentsTable />
       </div>
 
-      {/* ── Email Signup ─────────────────────────────────────── */}
-      <div className="mt-10 max-w-md">
-        <EmailSignup />
-      </div>
-
       {/* ── Footer ─────────────────────────────────────────── */}
       <footer className="mt-12 border-t border-gray-200 pt-6 text-xs text-gray-400">
         Data sourced from{" "}
@@ -52,7 +46,15 @@ export default function Home() {
         >
           mainebmvappt.cxmflow.com
         </a>
-        . Not affiliated with the Maine BMV. Updates every 5 minutes.
+        . Not affiliated with the Maine BMV.{" "}
+        <a
+          href="https://buymeacoffee.com/YOURUSERNAME"
+          className="underline hover:text-gray-600"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Buy me a coffee ☕
+        </a>
       </footer>
     </main>
   );

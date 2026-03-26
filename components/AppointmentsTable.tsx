@@ -157,8 +157,8 @@ export default function AppointmentsTable() {
       </div>
 
       {/* ── Table ──────────────────────────────────────── */}
-      <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-100">
+      <div className="rounded-xl border border-gray-200 bg-white overflow-x-auto">
+        <table className="min-w-[600px] w-full divide-y divide-gray-100">
           <thead>
             <tr className="bg-gray-50">
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Office</th>
