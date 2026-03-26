@@ -7,17 +7,17 @@ export default function Home() {
     <main className="max-w-5xl mx-auto px-4 py-10">
       {/* ── Header ─────────────────────────────────────────── */}
       <div className="mb-8">
-        <div className="flex items-start justify-between flex-wrap gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-              Maine BMV Real ID Slots
-            </h1>
-            <p className="text-gray-500 text-sm mt-1 max-w-lg">
-              Live tracker for Driver's License &amp; Real ID appointments at all 13 Maine BMV offices.
-              Short-notice slots highlighted. Checks every 10 minutes or so.
-            </p>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+            Maine BMV Real ID Slots
+          </h1>
+          <p className="text-gray-500 text-sm mt-1 max-w-lg">
+            Live tracker for Driver's License &amp; Real ID appointments at all 13 Maine BMV offices.
+            Short-notice slots highlighted. Checks every 10 minutes or so.
+          </p>
+          <div className="mt-1">
+            <LastChecked />
           </div>
-          <LastChecked />
         </div>
       </div>
 
