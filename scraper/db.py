@@ -99,8 +99,8 @@ def upsert_future_slot(db: Client, office: str, closest_date: date) -> bool:
                 "available": True,
             }).eq("id", row["id"]).execute()
             return False
-        elif closest_date < existing_date_obj or existing_date_obj < today_date:
-            # Closer date found, OR existing record's date is now in the past (stale) — retire it
+        elif closest_date < existing_date_obj or (existing_date_obj - today_date).days < GOLDEN_THRESHOLD_DAYS:
+            # Closer date found, OR existing record is within golden window / past (stale) — retire it
             db.table("appointments").update({
                 "is_current_closest": False,
                 "replaced_at": now,
