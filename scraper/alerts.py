@@ -87,7 +87,7 @@ def send_golden_alert(
 # ── Telegram ──────────────────────────────────────────────────────────────
 
 TELEGRAM_API_BASE = f"https://api.telegram.org/bot{os.environ.get('TELEGRAM_BOT_TOKEN', '')}"
-BUYMEACOFFEE_URL = "https://buymeacoffee.com/zacharybk"
+BUYMEACOFFEE_URL = "https://account.venmo.com/u/zacharybk"
 APP_URL = "https://maine-bmv-slots.vercel.app"
 
 

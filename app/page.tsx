@@ -54,7 +54,7 @@ export default function Home() {
         </a>
         . Not affiliated with the Maine BMV.{" "}
         <a
-          href="https://buymeacoffee.com/zacharybk"
+          href="https://account.venmo.com/u/zacharybk"
           className="underline hover:text-gray-600"
           target="_blank"
           rel="noopener noreferrer"
