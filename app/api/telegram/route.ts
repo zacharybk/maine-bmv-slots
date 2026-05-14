@@ -205,7 +205,7 @@ export async function POST(request: NextRequest) {
       const allInRegion = regionOffices.every((o) => current.includes(o));
       const newOffices = allInRegion
         ? current.filter((o) => !regionOffices.includes(o))
-        : [...new Set([...current, ...regionOffices])];
+        : Array.from(new Set([...current, ...regionOffices]));
 
       await upsertSubscriber(chatId, username, { offices: newOffices });
       await editMessageReplyMarkup(chatId, messageId, buildKeyboard(newOffices));
