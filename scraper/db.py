@@ -206,3 +206,33 @@ def get_active_subscribers(db: Client, office: str) -> list[str]:
         if not offices or office in offices:
             result.append(row["email"])
     return result
+
+
+def get_telegram_subscribers(db: Client, office: str) -> list[dict]:
+    """Return active Telegram subscribers watching this office (or all offices)."""
+    rows = (
+        db.table("telegram_subscribers")
+        .select("chat_id, offices, first_name, alerts_sent_count")
+        .eq("active", True)
+        .execute()
+    ).data
+    return [
+        {
+            "chat_id": row["chat_id"],
+            "first_name": row.get("first_name"),
+            "alerts_sent_count": row.get("alerts_sent_count", 0),
+        }
+        for row in rows
+        if not row.get("offices") or office in row["offices"]
+    ]
+
+
+def log_telegram_alert(db: Client, chat_id: int, office: str, slot_date: date, slot_time: str) -> None:
+    """Log a sent alert and increment the subscriber's alert count."""
+    db.table("telegram_alert_log").insert({
+        "chat_id": chat_id,
+        "office": office,
+        "slot_date": str(slot_date),
+        "slot_time": slot_time,
+    }).execute()
+    db.rpc("increment_alerts_sent_count", {"p_chat_id": chat_id}).execute()

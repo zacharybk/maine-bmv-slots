@@ -1,9 +1,11 @@
 """
-Email alerts via Resend when new golden slots appear.
+Alerts via Resend (email) and Telegram when new golden slots appear.
 """
 import os
 import resend
-from datetime import date
+import httpx
+import db as _db
+from datetime import date, datetime
 
 resend.api_key = os.environ.get("RESEND_API_KEY", "")
 
@@ -80,3 +82,75 @@ def send_golden_alert(
             })
         except Exception as e:
             print(f"Failed to send alert to {email}: {e}")
+
+
+# ── Telegram ──────────────────────────────────────────────────────────────
+
+TELEGRAM_API_BASE = f"https://api.telegram.org/bot{os.environ.get('TELEGRAM_BOT_TOKEN', '')}"
+BUYMEACOFFEE_URL = "https://buymeacoffee.com/zacharybk"
+
+
+def _fmt(appt_date, appt_time: str) -> str:
+    """Format date + time as '2:15 PM on May 15'."""
+    try:
+        time_str = datetime.strptime(appt_time[:5], "%H:%M").strftime("%-I:%M %p")
+    except Exception:
+        time_str = appt_time
+    try:
+        date_str = datetime.strptime(str(appt_date), "%Y-%m-%d").strftime("%B %-d")
+    except Exception:
+        date_str = str(appt_date)
+    return f"{time_str} on {date_str}"
+
+
+def send_telegram_alerts(
+    db_client,
+    subscribers: list[dict],
+    office: str,
+    new_slots: list[dict],
+    book_url: str,
+) -> None:
+    """Send one Telegram message per subscriber for all new slots at this office."""
+    if not subscribers or not new_slots or not os.environ.get("TELEGRAM_BOT_TOKEN"):
+        return
+
+    for sub in subscribers:
+        chat_id = sub["chat_id"]
+        name = sub.get("first_name")
+        count_before = sub.get("alerts_sent_count", 0)
+
+        if len(new_slots) == 1:
+            slot_str = _fmt(new_slots[0]["date"], new_slots[0]["time"])
+            greeting = f"Hey {name}, new" if name else "New"
+            body = f"⚡ <b>{greeting} slot in {office}</b> at {slot_str}"
+        else:
+            greeting = f"Hey {name}, new slots" if name else "New slots"
+            lines = "\n".join(f"• {_fmt(s['date'], s['time'])}" for s in new_slots)
+            body = f"⚡ <b>{greeting} in {office}</b>\n{lines}"
+
+        footer = ""
+        if count_before == 1:
+            footer = f'\n\n<a href="{BUYMEACOFFEE_URL}">☕ Buy me a coffee if this helped!</a>'
+
+        reply_markup = {"inline_keyboard": [
+            [{"text": "Book This Slot →", "url": book_url}],
+            [{"text": "Stop alerts", "callback_data": "stop"}],
+        ]}
+
+        try:
+            resp = httpx.post(
+                f"{TELEGRAM_API_BASE}/sendMessage",
+                json={
+                    "chat_id": chat_id,
+                    "text": f"{body}\n\nSlots go fast.{footer}",
+                    "parse_mode": "HTML",
+                    "reply_markup": reply_markup,
+                    "disable_web_page_preview": True,
+                },
+                timeout=10,
+            )
+            if resp.is_success:
+                for slot in new_slots:
+                    _db.log_telegram_alert(db_client, chat_id, office, slot["date"], slot["time"])
+        except Exception as e:
+            print(f"Telegram alert failed for {chat_id}: {e}")

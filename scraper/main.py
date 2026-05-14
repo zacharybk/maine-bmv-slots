@@ -214,17 +214,24 @@ async def main():
             print(f"  Golden: {summary['golden']} | Future: {summary['future']} "
                   f"| New alerts: {len(summary['new_golden'])}")
 
-        # Send email alerts for new golden slots
         if summary["new_golden"]:
-            subscribers = db.get_active_subscribers(db_client, office)
+            email_subs = db.get_active_subscribers(db_client, office)
+            telegram_subs = db.get_telegram_subscribers(db_client, office)
             for slot in summary["new_golden"]:
                 alerts.send_golden_alert(
-                    to_emails=subscribers,
+                    to_emails=email_subs,
                     office=office,
                     appt_date=slot["date"],
                     appt_time=slot["time"],
                     book_url=BMV_URL,
                 )
+            alerts.send_telegram_alerts(
+                db_client=db_client,
+                subscribers=telegram_subs,
+                office=office,
+                new_slots=summary["new_golden"],
+                book_url=BMV_URL,
+            )
 
         # Small pause between offices (polite scraping)
         await asyncio.sleep(2)
