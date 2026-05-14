@@ -88,6 +88,12 @@ def send_golden_alert(
 
 TELEGRAM_API_BASE = f"https://api.telegram.org/bot{os.environ.get('TELEGRAM_BOT_TOKEN', '')}"
 BUYMEACOFFEE_URL = "https://buymeacoffee.com/zacharybk"
+APP_URL = "https://maine-bmv-slots.vercel.app"
+
+
+def tracking_url(chat_id: int, office: str) -> str:
+    from urllib.parse import quote
+    return f"{APP_URL}/api/book?chat_id={chat_id}&office={quote(office)}"
 
 
 def _fmt(appt_date, appt_time: str) -> str:
@@ -133,7 +139,7 @@ def send_telegram_alerts(
             footer = f'\n\n<a href="{BUYMEACOFFEE_URL}">☕ Buy me a coffee if this helped!</a>'
 
         reply_markup = {"inline_keyboard": [
-            [{"text": "Book This Slot →", "url": book_url}],
+            [{"text": "Book This Slot →", "url": tracking_url(chat_id, office)}],
             [{"text": "Stop alerts", "callback_data": "stop"}],
         ]}
 

@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
       });
       await sendMessage(
         chatId,
-        "Welcome to Maine BMV Slot Alerts! I'll message you the moment a short-notice appointment opens.\n\nFirst, what's your first name?"
+        "You've made the right choice to finally book a BMV appointment. I'll message you the moment a short-notice slot is available.\n\nFirst, what's your first name?"
       );
       return NextResponse.json({ ok: true });
     }
