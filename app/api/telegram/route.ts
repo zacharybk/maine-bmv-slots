@@ -29,7 +29,31 @@ const REGION_LABELS: Record<string, string> = {
   aroostook: "Bangor & Aroostook",
 };
 
-const ALL_OFFICES = Object.values(OFFICE_REGIONS).flat();
+// Order defines bit positions 0–12
+const ALL_OFFICES = [
+  "Kennebunk", "Portland", "Scarborough", "Springvale", // southern: bits 0-3
+  "Rockland", "Topsham",                                // midcoast: bits 4-5
+  "Augusta", "Lewiston", "Rumford",                     // central:  bits 6-8
+  "Calais", "Ellsworth",                                // downeast: bits 9-10
+  "Bangor", "Caribou",                                  // aroostook: bits 11-12
+];
+
+function maskToOffices(mask: number): string[] {
+  return ALL_OFFICES.filter((_, i) => (mask >> i) & 1);
+}
+
+function officesToMask(offices: string[]): number {
+  return offices.reduce((mask, o) => {
+    const i = ALL_OFFICES.indexOf(o);
+    return i >= 0 ? mask | (1 << i) : mask;
+  }, 0);
+}
+
+function toggleRegionMask(mask: number, regionKey: string): number {
+  const regionMask = officesToMask(OFFICE_REGIONS[regionKey] ?? []);
+  const allSet = (mask & regionMask) === regionMask;
+  return allSet ? mask & ~regionMask : mask | regionMask;
+}
 
 // ── Telegram API helpers ───────────────────────────────────────────────────
 
@@ -62,32 +86,36 @@ async function answerCallbackQuery(id: string, text?: string) {
 }
 
 // ── Keyboard builder ───────────────────────────────────────────────────────
+// State is encoded as a bitmask in each button's callback_data.
+// No DB reads/writes happen during office selection — only on "Done ✓".
 
-function buildKeyboard(selectedOffices: string[]) {
-  const sel = new Set(selectedOffices);
+function buildKeyboard(mask: number) {
   const rows: object[][] = [];
 
   for (const [regionKey, offices] of Object.entries(OFFICE_REGIONS)) {
-    const allInRegion = offices.every((o) => sel.has(o));
-    const label = allInRegion
-      ? `✅ ${REGION_LABELS[regionKey]}`
-      : REGION_LABELS[regionKey];
+    const regionMask = officesToMask(offices);
+    const allInRegion = (mask & regionMask) === regionMask;
+    const newRegionMask = toggleRegionMask(mask, regionKey);
 
-    // Region header button (toggles all in region)
-    rows.push([{ text: label, callback_data: `region:${regionKey}` }]);
+    rows.push([{
+      text: allInRegion ? `✅ ${REGION_LABELS[regionKey]}` : REGION_LABELS[regionKey],
+      callback_data: `r:${regionKey}:${newRegionMask}`,
+    }]);
 
-    // Office buttons in pairs
     for (let i = 0; i < offices.length; i += 2) {
-      const pair = offices.slice(i, i + 2).map((o) => ({
-        text: sel.has(o) ? `✅ ${o}` : o,
-        callback_data: `toggle:${o}`,
-      }));
+      const pair = offices.slice(i, i + 2).map((o) => {
+        const bit = 1 << ALL_OFFICES.indexOf(o);
+        const selected = (mask & bit) !== 0;
+        return {
+          text: selected ? `✅ ${o}` : o,
+          callback_data: `t:${o}:${mask ^ bit}`,
+        };
+      });
       rows.push(pair);
     }
   }
 
-  rows.push([{ text: "Done ✓", callback_data: "confirm" }]);
-
+  rows.push([{ text: "Done ✓", callback_data: `confirm:${mask}` }]);
   return { inline_keyboard: rows };
 }
 
@@ -171,60 +199,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    // Confirm office selection
-    if (data === "confirm") {
-      const subscriber = await getSubscriber(chatId);
-      const offices: string[] = subscriber?.offices ?? [];
+    // Confirm office selection — only DB write during office selection flow
+    if (data.startsWith("confirm:")) {
+      const mask = parseInt(data.split(":")[1] ?? "0", 10);
 
-      if (offices.length === 0) {
+      if (mask === 0) {
         await answerCallbackQuery(cq.id, "Please select at least one office first.");
         return NextResponse.json({ ok: true });
       }
 
-      const officeText = offices.join(", ");
-
+      const offices = maskToOffices(mask);
+      const subscriber = await getSubscriber(chatId);
       await upsertSubscriber(chatId, username, {
-        active: true, pending_setup: false, setup_step: "awaiting_email",
+        active: true, pending_setup: false, setup_step: "awaiting_email", offices,
       });
       await editMessageText(
         chatId, messageId,
-        `You're all set${subscriber?.first_name ? `, ${subscriber.first_name}` : ""}! Watching: <b>${officeText}</b>.\n\nOne more thing — want to leave an email as backup? Reply with it or say <b>skip</b>.`,
+        `You're all set${subscriber?.first_name ? `, ${subscriber.first_name}` : ""}! Watching: <b>${offices.join(", ")}</b>.\n\nOne more thing — want to leave an email as backup? Reply with it or say <b>skip</b>.`,
         { reply_markup: { inline_keyboard: [] } }
       );
       return NextResponse.json({ ok: true });
     }
 
-    // Toggle a whole region
-    if (data.startsWith("region:")) {
-      const regionKey = data.replace("region:", "");
-      const regionOffices = OFFICE_REGIONS[regionKey] ?? [];
-      if (regionOffices.length === 0) return NextResponse.json({ ok: true });
-
-      const subscriber = await getSubscriber(chatId);
-      const current: string[] = subscriber?.offices ?? [];
-      const allInRegion = regionOffices.every((o) => current.includes(o));
-      const newOffices = allInRegion
-        ? current.filter((o) => !regionOffices.includes(o))
-        : Array.from(new Set([...current, ...regionOffices]));
-
-      await upsertSubscriber(chatId, username, { offices: newOffices });
-      await editMessageReplyMarkup(chatId, messageId, buildKeyboard(newOffices));
+    // Toggle region — no DB, new mask is already in callback_data
+    if (data.startsWith("r:")) {
+      const newMask = parseInt(data.split(":")[2] ?? "0", 10);
+      await editMessageReplyMarkup(chatId, messageId, buildKeyboard(newMask));
       return NextResponse.json({ ok: true });
     }
 
-    // Toggle individual office
-    if (data.startsWith("toggle:")) {
-      const office = data.replace("toggle:", "");
-      if (!ALL_OFFICES.includes(office)) return NextResponse.json({ ok: true });
-
-      const subscriber = await getSubscriber(chatId);
-      const current: string[] = subscriber?.offices ?? [];
-      const newOffices = current.includes(office)
-        ? current.filter((o) => o !== office)
-        : [...current, office];
-
-      await upsertSubscriber(chatId, username, { offices: newOffices });
-      await editMessageReplyMarkup(chatId, messageId, buildKeyboard(newOffices));
+    // Toggle individual office — no DB, new mask is already in callback_data
+    if (data.startsWith("t:")) {
+      const newMask = parseInt(data.split(":")[2] ?? "0", 10);
+      await editMessageReplyMarkup(chatId, messageId, buildKeyboard(newMask));
       return NextResponse.json({ ok: true });
     }
   }
@@ -291,7 +298,7 @@ export async function POST(request: NextRequest) {
       await sendMessage(
         chatId,
         `Nice to meet you, ${name}! Pick the offices you want alerts for.\n\nTap a region to select all offices in it, or tap individual offices.`,
-        { reply_markup: buildKeyboard([]) }
+        { reply_markup: buildKeyboard(0) }
       );
       return NextResponse.json({ ok: true });
     }
