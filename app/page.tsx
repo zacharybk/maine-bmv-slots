@@ -1,6 +1,7 @@
 import GoldenSlots from "@/components/GoldenSlots";
 import AppointmentsTable from "@/components/AppointmentsTable";
 import LastChecked from "@/components/LastChecked";
+import AlertSignup from "@/components/AlertSignup";
 
 export default function Home() {
   return (
@@ -23,6 +24,11 @@ export default function Home() {
 
       {/* ── Golden Slots (pinned) ───────────────────────────── */}
       <GoldenSlots />
+
+      {/* ── Alert Signup ───────────────────────────────────── */}
+      <div className="mb-8">
+        <AlertSignup />
+      </div>
 
       {/* ── All Appointments Table ──────────────────────────── */}
       <div className="mb-6">
